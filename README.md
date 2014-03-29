@@ -1,4 +1,4 @@
-skype-to-slack
+skype-chat-extract
 ==============
 
-Tool for migrating data from Skype to Slack
+Tool for extracting chat data from Skype

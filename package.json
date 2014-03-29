@@ -4,9 +4,9 @@
   "description": "Tool for extracting chat data from Skype",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/jakerella/skype-chat-extract.git"
   },
   "devDependencies": {
-    "sqlite3": "*"
+    "sqlite3": "~2.2"
   }
 }
