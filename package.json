@@ -1,0 +1,12 @@
+{
+  "name": "skype-chat-extract",
+  "version": "0.0.1",
+  "description": "Tool for extracting chat data from Skype",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "devDependencies": {
+    "sqlite3": "*"
+  }
+}
