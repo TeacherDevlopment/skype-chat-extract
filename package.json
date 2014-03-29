@@ -6,7 +6,8 @@
     "type": "git",
     "url": "https://github.com/jakerella/skype-chat-extract.git"
   },
-  "devDependencies": {
-    "sqlite3": "~2.2"
+  "dependencies": {
+    "sqlite3": "~2.2",
+    "colors": "*"
   }
 }
