@@ -3,6 +3,8 @@ var fs = require('fs'),
     colors = require('colors'),
     sqlite3 = require('sqlite3').verbose(),
     defaultFileLocation = '{{home}}/.Skype/{{username}}/main.db',
+    debug = false,
+    _log = console.log,
     options = {
         dbfile: null,
         username: null,
@@ -21,9 +23,16 @@ var fs = require('fs'),
  * @return {void}
  */
 function main() {
-    console.log("\nSkype Chat Extract\n".blue.bold);
+    console.info("\nSkype Chat Extract\n".blue.bold);
 
     var o = processOptions();
+
+    if (!o.dbfile || !o.chatname) {
+        console.error("Please be sure to specify the Skype db location and the chat name to export!\n".red);
+        printUsage();
+        process.exit(1);
+    }
+
 
     var db = new sqlite3.Database(o.dbfile, sqlite3.OPEN_READONLY, function() {
         console.log('db is ready');
@@ -41,13 +50,24 @@ function main() {
                 }
             },
             function(err, count) {
-                console.log(('found ' + count + ' rows').green);
+                console.info(('found ' + count + ' rows').green);
                 db.close();
                 process.exit(0);
             }
         );
     });
 }
+
+/**
+ * Base console log abstraction for debug switching
+ * @return {void}
+ */
+console.log = function() {
+    if (debug) {
+        _log.apply(console, Array.prototype.slice.call(arguments));
+    }
+};
+
 
 /**
  * Process command line arguments and integrate with default options
@@ -78,6 +98,9 @@ function processOptions() {
         } else if (/^exportfile=/.test(val)) {
             o.exportfile = val.split(/\=/)[1];
 
+        } else if (/^--debug$/.test(val)) {
+            debug = true;
+
         } else if (/^-h$/.test(val) || /^help$/.test(val)) {
             // If the user is request help, show it and exit
             printUsage();
@@ -91,27 +114,33 @@ function processOptions() {
             .replace(/\{\{username\}\}/, 'jakerella');
     }
 
-    console.log(('Initializing wih the following options: ' + JSON.stringify(o)).blue);
+    console.log(('Initializing wih the following options:', JSON.stringify(o)).blue);
 
     return o;
 }
 
 function printUsage() {
-    console.log(
-        "This script extracts chat messages from your local Skype\n" +
-        "storage and creates a comma-separated version of the file\n" +
-        "(a .csv) useful for importing into other systems." +
+    console.info(
+        "This script extracts chat messages from your local Skype storage and creates a\n" +
+        "comma-separated version of the file (a .csv) useful for importing into other systems." +
         "\n\n" +
-        "    Basic Example:" +
-        "  ~$ node extract.js username=jordan chatname=\"Project Chat\"".yellow +
+        "  Basic Example:\n" +
+        "    ~$ node extract.js username=jordan chatname=\"Project Chat\"".green +
+        "\n\n" +
+        "  Example specifying export file name and max age of chat messages:\n" +
+        "    ~$ node extract.js username=jordan chatname=\"Project Chat\" maxage=2014-01-01 exportfile=/home/me/project_chat.csv".green +
+        "\n\n" +
+        "Note that you MUST specify either a `dbfile` or `username` option (but not both)!\n".yellow +
+        "You must also specify the chat you wish to export, which will be loosely matched.\n" +
+        "(Multiple chats matching \"project\", for example, would cause an error.)".grey +
         "\n\n" +
         "Available options:\n" +
-        "  username    Your Skype username; used to find your Skype DB file (optional, use either this OR 'dbfile')\n" +
-        "  dbfile      The location of your Skype SQLite database file (optional, use either this OR 'username')\n" +
-        "  chatname    The name of the chat you wish to export (can be a partial name) (required)\n" +
-        "  limit       Limit the number of chat messages returned (optional, defaults to 1000)\n" +
-        "  maxage      The oldest chat message to retrieve; can be date (YYYY-MM-DD) or timestamp (optional)\n" +
-        "  exportfile  Name of the file to export to (optional, defaults to output/{timestamp}.csv)\n"
+        "  username    Your Skype username; used to find your Skype DB file" + " (optional, use either this OR `dbfile`)\n".grey +
+        "  dbfile      The location of your Skype SQLite database file" + " (optional, use either this OR `username`)\n".grey +
+        "  chatname    The name of the chat you wish to export (can be a partial name)" + " (required)\n".grey +
+        "  limit       Limit the number of chat messages returned" + " (optional, defaults to 1000)\n".grey +
+        "  maxage      The oldest chat message to retrieve; can be date (YYYY-MM-DD) or timestamp" + " (optional)\n".grey +
+        "  exportfile  Name of the file to export to" + " (optional, defaults to output/{timestamp}.csv)\n".grey
     );
 }
 
