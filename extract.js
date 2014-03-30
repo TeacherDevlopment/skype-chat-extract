@@ -12,10 +12,10 @@ var fs = require('fs'),
         limit: 1000,
         maxage: null,
         exportfile: './output/' + (new Date()).getTime() + '.csv',
-        fields: ['timestamp', 'id', 'author', 'body'],
-        // FOR SLACK: timestamp, channel, username, text
+        fields: ['timestamp', 'chatname', 'author', 'body', 'id'],
         includeHeader: true,
-        newName: null,
+        outputchatname: null,
+        ignoreNullBody: true,
         authorMap: {}
     };
 
@@ -33,6 +33,14 @@ function main() {
         printUsage();
         process.exit(10);
     }
+
+    if (!o.exportfile) {
+        console.error('Sorry, but that is not a valid export file location!'.red);
+        console.log('Export file specified: ' + o.exportfileArg);
+        process.exit(11);
+    }
+
+    console.log(('Output will be written to ' + o.exportfile).grey);
 
     var db = new sqlite3.Database(o.dbfile, sqlite3.OPEN_READONLY, function(err) {
         if (err) {
@@ -54,7 +62,7 @@ function main() {
                 db.close();
                 console.log('Database connection closed.'.grey);
 
-                writeOutputFile(o, messages, function() {
+                writeOutputFile(o, chat, messages, function() {
                     console.info(('Successfully wrote all messages to file: ' + o.exportfile).green);
                     process.exit(0);
                 });
@@ -102,7 +110,11 @@ function processOptions() {
             o.maxage = (d && d.getTime()) || null;
 
         } else if (/^exportfile=/.test(val)) {
-            o.exportfile = val.split(/\=/)[1];
+            o.exportfileArg = val;
+            o.exportfile = fs.realpathSync(val.split(/\=/)[1]);
+
+        } else if (/^outputchatname=/.test(val)) {
+            o.outputchatname = val.split(/\=/)[1];
 
         } else if (/^--debug$/.test(val)) {
             debug = true;
@@ -210,10 +222,54 @@ function getChatMessages(o, db, chat, cb) {
     });
 }
 
-function writeOutputFile(o, messages, cb) {
+function writeOutputFile(o, chat, messages, cb) {
+    var content = [],
+        outputchatname = (o.outputchatname || chat.name);
+
+    /*
+        fields: ['timestamp', 'chatname', 'author', 'body', 'id'],
+        // FOR SLACK: timestamp, channel, username, text
+        includeHeader: true,
+        outputchatname: null,
+        authorMap: {}
+     */
+
     cb = cb || function() {};
 
-    cb();
+    if (o.includeHeader) {
+        content.push(o.fields.join(','));
+    }
+
+    messages.forEach(function(msg) {
+        var line = [];
+
+        if (o.ignoreNullBody && msg['body'] === null) {
+            return true;
+        }
+
+        o.fields.forEach(function(field) {
+            var cell = msg[field];
+
+            if (!cell && field === 'chatname') {
+                cell = outputchatname;
+            }
+
+            if (cell && !Number(cell)) {
+                // surround text cells with quotes to account for 
+                // possible spaces in the content
+                cell = '"' + cell + '"';
+            }
+            line.push(cell || '');
+        });
+
+        content.push(line.join(','));
+    });
+
+    console.log(content.join("\n"));
+
+    // TODO: write the file contents
+
+    cb(content);
 }
 
 // ------------------ START SCRIPT ------------------- //
