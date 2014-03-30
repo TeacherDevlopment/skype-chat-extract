@@ -264,7 +264,7 @@ function writeOutputFile(o, chat, messages, cb) {
             if (cell && !Number(cell)) {
                 // surround text cells with quotes to account for 
                 // possible spaces in the content
-                cell = '"' + cell + '"';
+                cell = '"' + cell.replace(/\"/g, '\\"') + '"';
             }
             line.push(cell || '');
         });
