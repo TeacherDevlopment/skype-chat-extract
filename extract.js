@@ -16,7 +16,7 @@ var fs = require('fs'),
         includeHeader: true,
         outputchatname: null,
         ignoreNullBody: true,
-        authorMap: {}
+        authormap: {}
     };
 
 /**
@@ -114,6 +114,13 @@ function processOptions() {
         } else if (/^outputchatname=/.test(val)) {
             o.outputchatname = val.split(/\=/)[1];
 
+        } else if (/^authormap=/.test(val)) {
+            try {
+                o.authormap = JSON.parse(val.split(/\=/)[1]);
+            } catch(e) {
+                console.warn('Unable to parse authormap option. Please make sure it is a valid JSON object!'.yellow);
+            }
+
         } else if (/^--debug$/.test(val)) {
             debug = true;
 
@@ -149,12 +156,14 @@ function printUsage() {
         "(Multiple chats matching \"project\", for example, would cause an error.)".grey +
         "\n\n" +
         "Available options:\n" +
-        "  username    Your Skype username; used to find your Skype DB file" + " (optional, use either this OR `dbfile`)\n".grey +
-        "  dbfile      The location of your Skype SQLite database file" + " (optional, use either this OR `username`)\n".grey +
-        "  chatname    The name of the chat you wish to export (can be a partial name)" + " (required)\n".grey +
-        "  limit       Limit the number of chat messages returned" + " (optional, defaults to 1000)\n".grey +
-        "  maxage      The oldest chat message to retrieve; can be date (YYYY-MM-DD) or timestamp" + " (optional)\n".grey +
-        "  exportfile  Name of the file to export to" + " (optional, defaults to output/{timestamp}.csv)\n".grey
+        "  username       Your Skype username; used to find your Skype DB file" + " (optional, use either this OR `dbfile`)\n".grey +
+        "  dbfile         The location of your Skype SQLite database file" + " (optional, use either this OR `username`)\n".grey +
+        "  chatname       The name of the chat you wish to export (can be a partial name)" + " (required)\n".grey +
+        "  limit          Limit the number of chat messages returned" + " (optional, defaults to 1000)\n".grey +
+        "  maxage         The oldest chat message to retrieve; can be date (YYYY-MM-DD) or timestamp" + " (optional)\n".grey +
+        "  exportfile     Name of the file to export to" + " (optional, defaults to ./{timestamp}.csv)\n".grey +
+        "  outputchatname Name to use in the output file for this chat" + " (optional, defaults to Skype chat name)\n".grey +
+        "  authormap      An object mapping Skype usernames to the target service" + " (optional, example: { 'john.doe': 'jdoe' })\n".grey
     );
 }
 
@@ -228,12 +237,6 @@ function writeOutputFile(o, chat, messages, cb) {
     var content = [],
         outputchatname = (o.outputchatname || chat.name);
 
-    /*
-        fields: ['timestamp', 'chatname', 'author', 'body', 'id'],
-        // FOR SLACK: timestamp, channel, username, text
-        authorMap: {}
-     */
-
     cb = cb || function() {};
 
     if (o.includeHeader) {
@@ -252,6 +255,10 @@ function writeOutputFile(o, chat, messages, cb) {
 
             if (!cell && field === 'chatname') {
                 cell = outputchatname;
+            }
+
+            if (field === 'author' && o.authormap && o.authormap[cell]) {
+                cell = o.authormap[cell];
             }
 
             if (cell && !Number(cell)) {
