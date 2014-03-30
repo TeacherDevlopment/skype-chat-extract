@@ -12,7 +12,8 @@ var fs = require('fs'),
         limit: 1000,
         maxage: null,
         exportfile: './output/' + (new Date()).getTime() + '.csv',
-        fields: ['timestamp', 'convo_id', 'author', 'body_xml'],
+        fields: ['timestamp', 'id', 'author', 'body'],
+        // FOR SLACK: timestamp, channel, username, text
         includeHeader: true,
         newName: null,
         authorMap: {}
@@ -45,10 +46,21 @@ function main() {
         console.log(('Database connection opened (' + o.dbfile + ')...').grey);
 
         verifyChatInfo(o, db, function(chat) {
-            console.info(('Found Skype chat room: \'' + chat.name + '\' (id=' + chat.id + ')').green);
+            console.info(('Found Skype chat room: \'' + chat.name + '\' (id=' + chat.id + ')').blue);
+
+            getChatMessages(o, db, chat, function(messages) {
+                console.info(('Found ' + messages.length + ' messages in this chat').blue);
+
+                db.close();
+                console.log('Database connection closed.'.grey);
+
+                writeOutputFile(o, messages, function() {
+                    console.info(('Successfully wrote all messages to file: ' + o.exportfile).green);
+                    process.exit(0);
+                });
+            });
 
         });
-
     });
 }
 
@@ -147,6 +159,7 @@ function verifyChatInfo(o, db, cb) {
                 "There was an error verifying the Skype chat room info:\n".red,
                 err.toString().red
             );
+            console.log(sql);
             process.exit(30);
         }
 
@@ -164,6 +177,44 @@ function verifyChatInfo(o, db, cb) {
     });
 }
 
+function getChatMessages(o, db, chat, cb) {
+    var sql = 'SELECT Messages.timestamp AS timestamp, Messages.id AS id, Messages.author AS author, Messages.body_xml AS body ' +
+        'FROM Messages JOIN Chats ON Messages.convo_id = Chats.conv_dbid '+
+        'WHERE Messages.convo_id = ' + chat.id;
+
+    cb = cb || function() {};
+
+    if (o.maxage) {
+        sql += ' AND Messages.timestamp >= ' + o.maxage;
+    }
+
+    if (o.limit) {
+        sql += ' LIMIT ' + o.limit;
+    }
+
+    db.all(sql, function(err, rows) {
+        if (err) {
+            console.error(
+                "There was an error retrieving chat messages:\n".red,
+                err.toString().red
+            );
+            console.log(sql);
+            process.exit(40);
+        }
+        
+        if (!rows.length) {
+            console.warn('No chat messages were found!');
+        }
+
+        cb(rows);
+    });
+}
+
+function writeOutputFile(o, messages, cb) {
+    cb = cb || function() {};
+
+    cb();
+}
 
 // ------------------ START SCRIPT ------------------- //
                         main();
