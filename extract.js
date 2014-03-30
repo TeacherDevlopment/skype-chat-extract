@@ -30,12 +30,16 @@ function main() {
     if (!o.dbfile || !o.chatname) {
         console.error("Please be sure to specify the Skype db location and the chat name to export!\n".red);
         printUsage();
-        process.exit(1);
+        process.exit(10);
     }
 
+    var db = new sqlite3.Database(o.dbfile, sqlite3.OPEN_READONLY, function(err) {
+        if (err) {
+            console.error(('Problem opening connection to SQLite database: ' + err.toString()).red);
+            process.exit(20);
+        }
 
-    var db = new sqlite3.Database(o.dbfile, sqlite3.OPEN_READONLY, function() {
-        console.log('db is ready');
+        console.log('Database opened is ready');
 
         db.each('SELECT Messages.id, convo_id, author, Messages.timestamp, body_xml ' +
             'FROM Messages ' +
@@ -59,7 +63,7 @@ function main() {
 }
 
 /**
- * Base console log abstraction for debug switching
+ * Basic console log abstraction for debug switching
  * @return {void}
  */
 console.log = function() {
@@ -111,7 +115,7 @@ function processOptions() {
     if (!o.dbfile && o.username) {
         o.dbfile = defaultFileLocation
             .replace(/\{\{home\}\}/, process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'])
-            .replace(/\{\{username\}\}/, 'jakerella');
+            .replace(/\{\{username\}\}/, o.username);
     }
 
     console.log(('Initializing wih the following options:', JSON.stringify(o)).blue);
