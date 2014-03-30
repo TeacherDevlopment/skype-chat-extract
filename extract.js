@@ -163,6 +163,8 @@ function verifyChatInfo(o, db, cb) {
 
     cb = cb || function() {};
 
+    console.log("Cgats SQL:\n", sql);
+
     db.all(sql, function(err, rows) {
         if (err) {
             console.error(
@@ -195,12 +197,15 @@ function getChatMessages(o, db, chat, cb) {
     cb = cb || function() {};
 
     if (o.maxage) {
-        sql += ' AND Messages.timestamp >= ' + o.maxage;
+        // Need to divide by 1000 because Skype messages use seconds, not milliseconds
+        sql += ' AND Messages.timestamp >= ' + (o.maxage / 1000);
     }
 
     if (o.limit) {
         sql += ' LIMIT ' + o.limit;
     }
+
+    console.log("Messages SQL:\n", sql);
 
     db.all(sql, function(err, rows) {
         if (err) {
@@ -208,7 +213,6 @@ function getChatMessages(o, db, chat, cb) {
                 "There was an error retrieving chat messages:\n".red,
                 err.toString().red
             );
-            console.log(sql);
             process.exit(40);
         }
         
@@ -227,8 +231,6 @@ function writeOutputFile(o, chat, messages, cb) {
     /*
         fields: ['timestamp', 'chatname', 'author', 'body', 'id'],
         // FOR SLACK: timestamp, channel, username, text
-        includeHeader: true,
-        outputchatname: null,
         authorMap: {}
      */
 
