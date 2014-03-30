@@ -35,30 +35,20 @@ function main() {
 
     var db = new sqlite3.Database(o.dbfile, sqlite3.OPEN_READONLY, function(err) {
         if (err) {
-            console.error(('Problem opening connection to SQLite database: ' + err.toString()).red);
+            console.error(
+                ("Problem opening connection to SQLite database (" + o.dbfile + "):\n").red,
+                err.toString().red
+            );
             process.exit(20);
         }
 
-        console.log('Database opened is ready');
+        console.log(('Database connection opened (' + o.dbfile + ')...').grey);
 
-        db.each('SELECT Messages.id, convo_id, author, Messages.timestamp, body_xml ' +
-            'FROM Messages ' +
-            'JOIN Chats ON Messages.convo_id = Chats.conv_dbid '+
-            'WHERE convo_id IN (SELECT Chats.conv_dbid FROM Chats WHERE friendlyname LIKE \'%PROJ - iostudio%\') ' +
-            'LIMIT 10',
-            function(err, row) {
-                if (err) {
-                    console.error(err);
-                } else {
-                    console.log(row.id + ', ' + row.convo_id + ', ' + row.timestamp);
-                }
-            },
-            function(err, count) {
-                console.info(('found ' + count + ' rows').green);
-                db.close();
-                process.exit(0);
-            }
-        );
+        verifyChatInfo(o, db, function(chat) {
+            console.info(('Found Skype chat room: \'' + chat.name + '\' (id=' + chat.id + ')').green);
+
+        });
+
     });
 }
 
@@ -118,8 +108,6 @@ function processOptions() {
             .replace(/\{\{username\}\}/, o.username);
     }
 
-    console.log(('Initializing wih the following options:', JSON.stringify(o)).blue);
-
     return o;
 }
 
@@ -146,6 +134,34 @@ function printUsage() {
         "  maxage      The oldest chat message to retrieve; can be date (YYYY-MM-DD) or timestamp" + " (optional)\n".grey +
         "  exportfile  Name of the file to export to" + " (optional, defaults to output/{timestamp}.csv)\n".grey
     );
+}
+
+function verifyChatInfo(o, db, cb) {
+    var sql = 'SELECT friendlyname AS name, conv_dbid AS id FROM Chats WHERE friendlyname LIKE \'%' + o.chatname + '%\'';
+
+    cb = cb || function() {};
+
+    db.all(sql, function(err, rows) {
+        if (err) {
+            console.error(
+                "There was an error verifying the Skype chat room info:\n".red,
+                err.toString().red
+            );
+            process.exit(30);
+        }
+
+        if (!rows.length) {
+            console.error("Sorry, but there was no chat room matching that chatname\n".red);
+            process.exit(31);
+        }
+
+        if (rows.length > 1) {
+            console.error("There is more than one chat room matching that chatname, can you be more specific?\n".red);
+            process.exit(32);
+        }
+
+        cb(rows[0]);
+    });
 }
 
 
