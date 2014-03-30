@@ -11,7 +11,7 @@ var fs = require('fs'),
         chatname: null,
         limit: 1000,
         maxage: null,
-        exportfile: './output/' + (new Date()).getTime() + '.csv',
+        exportfile: './' + (new Date()).getTime() + '.csv',
         fields: ['timestamp', 'chatname', 'author', 'body', 'id'],
         includeHeader: true,
         outputchatname: null,
@@ -20,13 +20,24 @@ var fs = require('fs'),
     };
 
 /**
+ * Basic console log abstraction for debug switching
+ * @return {void}
+ */
+console.log = function() {
+    if (debug) {
+        _log.apply(console, Array.prototype.slice.call(arguments));
+    }
+};
+
+/**
  * Begins script execution
  * @return {void}
  */
 function main() {
     console.info("\nSkype Chat Extract\n".blue.bold);
 
-    var o = processOptions();
+    var origFile,
+        o = processOptions();
 
     if (!o.dbfile || !o.chatname) {
         console.error("Please be sure to specify the Skype db location and the chat name to export!\n".red);
@@ -35,8 +46,7 @@ function main() {
     }
 
     if (!o.exportfile) {
-        console.error('Sorry, but that is not a valid export file location!'.red);
-        console.log('Export file specified: ' + o.exportfileArg);
+        console.error('Sorry, but no export file location was provided!'.red);
         process.exit(11);
     }
 
@@ -73,17 +83,6 @@ function main() {
 }
 
 /**
- * Basic console log abstraction for debug switching
- * @return {void}
- */
-console.log = function() {
-    if (debug) {
-        _log.apply(console, Array.prototype.slice.call(arguments));
-    }
-};
-
-
-/**
  * Process command line arguments and integrate with default options
  * @return {Object} The integrated options
  */
@@ -110,8 +109,7 @@ function processOptions() {
             o.maxage = (d && d.getTime()) || null;
 
         } else if (/^exportfile=/.test(val)) {
-            o.exportfileArg = val;
-            o.exportfile = fs.realpathSync(val.split(/\=/)[1]);
+            o.exportfile = val.split(/\=/)[1];
 
         } else if (/^outputchatname=/.test(val)) {
             o.outputchatname = val.split(/\=/)[1];
@@ -265,9 +263,16 @@ function writeOutputFile(o, chat, messages, cb) {
         content.push(line.join(','));
     });
 
-    console.log(content.join("\n"));
-
-    // TODO: write the file contents
+    try {
+        fs.writeFileSync(o.exportfile, content.join("\n"));
+    } catch(err) {
+        console.error(
+            "Sorry, but I was unable to write to that export file location!\n".red,
+            err.toString().red
+        );
+        console.log('Export file specified: ' + o.exportfile);
+        process.exit(50);
+    }
 
     cb(content);
 }
