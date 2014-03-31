@@ -16,6 +16,7 @@ var fs = require('fs'),
         includeHeader: true,
         outputchatname: null,
         ignoreNullBody: true,
+        formattime: false,
         authormap: {}
     };
 
@@ -121,6 +122,9 @@ function processOptions() {
                 console.warn('Unable to parse authormap option. Please make sure it is a valid JSON object!'.yellow);
             }
 
+        } else if (/^formattime$/.test(val)) {
+            o.formattime = true;
+
         } else if (/^--debug$/.test(val)) {
             debug = true;
 
@@ -163,7 +167,8 @@ function printUsage() {
         "  maxage         The oldest chat message to retrieve; can be date (YYYY-MM-DD) or timestamp" + " (optional)\n".grey +
         "  exportfile     Name of the file to export to" + " (optional, defaults to ./{timestamp}.csv)\n".grey +
         "  outputchatname Name to use in the output file for this chat" + " (optional, defaults to Skype chat name)\n".grey +
-        "  authormap      An object mapping Skype usernames to the target service" + " (optional, example: { 'john.doe': 'jdoe' })\n".grey
+        "  authormap      An object mapping Skype usernames to the target service" + " (optional, example: { 'john.doe': 'jdoe' })\n".grey +
+        "  formattime     If specified (no value required) timestamps will be formatted in 'YYYY-MM-DD H:i:s Z' format" + " (optional)\n".grey
     );
 }
 
@@ -251,10 +256,20 @@ function writeOutputFile(o, chat, messages, cb) {
         }
 
         o.fields.forEach(function(field) {
-            var cell = msg[field];
+            var d, cell = msg[field];
 
             if (!cell && field === 'chatname') {
                 cell = outputchatname;
+            }
+
+            if (field === 'timestamp' && o.formattime) {
+                d = new Date(cell);
+                if (d) {
+                    tz = d.toLocaleString().match(/[AP]M ([A-Z0-9]+)$/)[1];
+                    cell = d.toISOString()
+                        .replace(/T/, ' ')
+                        .replace(/\.[0-9]+Z/, ' ' + tz);
+                }
             }
 
             if (field === 'author' && o.authormap && o.authormap[cell]) {

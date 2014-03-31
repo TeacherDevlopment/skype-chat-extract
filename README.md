@@ -36,6 +36,7 @@ maxage         The oldest chat message to retrieve; can be date (YYYY-MM-DD) or 
 exportfile     Name of the file to export to (optional, defaults to ./{timestamp}.csv)
 outputchatname Name to use in the output file for this chat (optional, defaults to Skype chat name)
 authormap      An object mapping Skype usernames to the target service (optional, example: { 'john.doe': 'jdoe' })
+formattime     If specified (no value required) timestamps will be formatted in 'YYYY-MM-DD H:i:s Z' format (optional)
 ```
 
 ## Author
