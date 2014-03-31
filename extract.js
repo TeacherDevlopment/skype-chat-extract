@@ -256,19 +256,24 @@ function writeOutputFile(o, chat, messages, cb) {
         }
 
         o.fields.forEach(function(field) {
-            var d, cell = msg[field];
+            var dt, m, d, cell = msg[field];
 
             if (!cell && field === 'chatname') {
                 cell = outputchatname;
             }
 
             if (field === 'timestamp' && o.formattime) {
-                d = new Date(cell);
-                if (d) {
-                    tz = d.toLocaleString().match(/[AP]M ([A-Z0-9]+)$/)[1];
-                    cell = d.toISOString()
-                        .replace(/T/, ' ')
-                        .replace(/\.[0-9]+Z/, ' ' + tz);
+                dt = new Date(cell * 1000);
+                if (dt) {
+                    m = (dt.getMonth() + 1);
+                    d = dt.getDate();
+                    if (m < 10) { m = '0' + m; }
+                    if (d < 10) { d = '0' + d; }
+                    cell = dt.getFullYear() + '-' + m + '-' + d;
+                    cell += ' ' + dt.toTimeString().substr(0, 8);
+                    tz = dt.toString().match(/\(([A-Z0-9]+)\)$/);
+                    tz = (tz && tz[1]) || '???';
+                    cell += ' ' + tz;
                 }
             }
 
