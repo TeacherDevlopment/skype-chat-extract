@@ -17,6 +17,7 @@ var fs = require('fs'),
         outputchatname: null,
         ignoreNullBody: true,
         formattime: false,
+        convertquotes: true,
         authormap: {}
     };
 
@@ -284,7 +285,10 @@ function writeOutputFile(o, chat, messages, cb) {
             if (cell && !Number(cell)) {
                 // surround text cells with quotes to account for 
                 // possible spaces in the content
-                cell = '"' + cell.replace(/\"/g, '\\"') + '"';
+                if (o.convertquotes) {
+                    cell = cell.replace(/\"/g, '\'');
+                }
+                cell = '"' + cell + '"';
             }
             line.push(cell || '');
         });
